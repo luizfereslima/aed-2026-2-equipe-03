@@ -10,5 +10,5 @@ Líder:
 Luiz Felipe Dias Cardoso Feres Lima — 254124
 
 Repositório público:
-https://github.com/...
+https://github.com/luizfereslima/aed-2026-2-equipe-03
 ```
