@@ -23,7 +23,7 @@ Siga os comandos do [README](../../README.md#como-testar).
 ## Quem fez o quê
 
 ```text
-Luiz Lima — Desenvolvimento inicial do projeto.
-Gabriel Santiago Silva — Atualização dos docs e implementação de teste
+Luiz Felipe Dias Cardoso Feres Lima — Desenvolvimento inicial do projeto.
+Gabriel Santiago Silva —  Atualização dos docs e implementação de teste
 TODO_EQUIPE: Nome — responsabilidade
 ```

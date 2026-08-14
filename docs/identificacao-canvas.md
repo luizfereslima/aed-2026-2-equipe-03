@@ -2,10 +2,12 @@
 Equipe 03
 
 Integrantes:
-Nome completo — matrícula
+Luiz Felipe Dias Cardoso Feres Lima — 254124
+TODO_EQUIPE: nome completo — matrícula
+TODO_EQUIPE: nome completo — matrícula
 
 Líder:
-Nome completo — matrícula
+Luiz Felipe Dias Cardoso Feres Lima — 254124
 
 Repositório público:
 https://github.com/...
