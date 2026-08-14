@@ -6,6 +6,7 @@ Projeto acadêmico da disciplina Arquitetura Reativa e Event-Driven (AED) da PUC
 
 ```text
 Luiz Felipe Dias Cardoso Feres Lima — 254124
+Gabriel Santiago Silva - 258220
 TODO_EQUIPE: nome completo — matrícula
 TODO_EQUIPE: nome completo — matrícula
 ```
@@ -157,6 +158,28 @@ Execute:
 ```bash
 cd venda-ingressos-consumer
 mvn test -Dtest=IngressoServiceTest
+```
+
+## Como verificar o contrato no fio
+
+O contrato publicado é verificado por testes automatizados no publisher, sem depender de inspeção manual do tópico.
+
+`IngressoEmitidoEventSerializacaoTest` serializa o `IngressoEmitidoEvent` com o mesmo `JsonSerializer` configurado em `application.yml` e valida que:
+
+- `ocorridoEm` sai como texto ISO-8601, e não como número epoch;
+- o payload contém exatamente os sete campos do contrato.
+
+`PublicacaoIngressoServiceTest` lê `app.kafka.*` do próprio `application.yml` e valida que:
+
+- os cabeçalhos `ce_specversion`, `ce_id`, `ce_source` e `ce_type` saem preenchidos;
+- `ce_id` é o `eventoId`, e não o `ingressoId` ou o `vendaId`;
+- o `ce_type` publicado tem grafia única entre o código e o ADR-002.
+
+Execute:
+
+```bash
+cd venda-ingressos-publisher
+mvn test -Dtest=IngressoEmitidoEventSerializacaoTest,PublicacaoIngressoServiceTest
 ```
 
 ## Como verificar mensagens no Kafka
