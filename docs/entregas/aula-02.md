@@ -24,6 +24,6 @@ Siga os comandos do [README](../../README.md#como-testar).
 
 ```text
 Luiz Lima — Desenvolvimento inicial do projeto.
-TODO_EQUIPE: Nome — responsabilidade
+Gabriel Santiago Silva — Atualização dos docs e implementação de teste
 TODO_EQUIPE: Nome — responsabilidade
 ```
