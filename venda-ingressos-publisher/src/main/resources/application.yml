@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: venda-ingressos-publisher
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+app:
+  kafka:
+    topico-ingresso-emitido: ingressos.ingresso-emitido.v1
+    ce-source: /venda-ingressos-publisher
+    ce-type-ingresso-emitido: ingressos.ingresso.emitido.v1

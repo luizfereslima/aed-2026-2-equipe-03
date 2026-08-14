@@ -1,0 +1,53 @@
+services:
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: aed-kafka
+    ports:
+      - "9092:29092"
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,EXTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    volumes:
+      - kafka-data:/bitnami/kafka
+
+  venda-ingressos-publisher:
+    build:
+      context: ./venda-ingressos-publisher
+    container_name: venda-ingressos-publisher
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
+      APP_KAFKA_CE_SOURCE: /venda-ingressos-publisher
+      APP_KAFKA_CE_TYPE_INGRESSO_EMITIDO: ingressos.ingresso.emitido.v1
+
+  venda-ingressos-consumer:
+    build:
+      context: ./venda-ingressos-consumer
+    container_name: venda-ingressos-consumer
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/data/consumer-db
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
+    volumes:
+      - consumer-data:/data
+
+volumes:
+  kafka-data:
+  consumer-data:

@@ -1,0 +1,33 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: venda-ingressos-consumer
+  datasource:
+    url: jdbc:h2:file:./data/consumer-db;AUTO_SERVER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: venda-ingressos-consumer
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.value.default.type: br.pucminas.aed.vendaingressosconsumer.domain.IngressoEmitidoEvent
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: br.pucminas.aed.vendaingressosconsumer.domain
+    listener:
+      ack-mode: manual
+
+app:
+  kafka:
+    topico-ingresso-emitido: ingressos.ingresso-emitido.v1
