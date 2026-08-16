@@ -7,7 +7,7 @@ Projeto acadêmico da disciplina Arquitetura Reativa e Event-Driven (AED) da PUC
 ```text
 Luiz Felipe Dias Cardoso Feres Lima — 254124
 Gabriel Santiago Silva - 258220
-TODO_EQUIPE: nome completo — matrícula
+Gabriel Grapeggia Ceola - 255596
 TODO_EQUIPE: nome completo — matrícula
 ```
 
