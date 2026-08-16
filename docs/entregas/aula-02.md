@@ -25,6 +25,7 @@ Siga os comandos do [README](../../README.md#como-testar).
 ```text
 Luiz Felipe Dias Cardoso Feres Lima — Desenvolvimento inicial do projeto.
 Gabriel Santiago Silva —  Atualização dos docs e implementação de teste
+Gabriel Grapeggia Ceola — Discussão do domínio e desenvolvimento inicial.
 Daniel da Silveira Moreira — Revisão do projeto e avaliação do estado atual da implementação.
 TODO_EQUIPE: Nome — responsabilidade
 ```
