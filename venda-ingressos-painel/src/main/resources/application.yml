@@ -1,0 +1,27 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: venda-ingressos-painel
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: venda-ingressos-painel
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.value.default.type: br.pucminas.aed.vendaingressospainel.domain.IngressoEmitidoEvent
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: br.pucminas.aed.vendaingressospainel.domain
+    listener:
+      ack-mode: manual
+
+app:
+  kafka:
+    topico-ingresso-emitido: ingressos.ingresso-emitido.v1
+  painel:
+    duracao-janela: PT5M
+    tolerancia-atraso: PT2M

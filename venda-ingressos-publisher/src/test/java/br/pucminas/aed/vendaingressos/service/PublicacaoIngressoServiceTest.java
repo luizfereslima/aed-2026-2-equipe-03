@@ -6,6 +6,7 @@ import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.C
 import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.CE_TIME;
 import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.CE_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -28,9 +29,10 @@ import org.springframework.kafka.core.KafkaTemplate;
 class PublicacaoIngressoServiceTest {
 
     private static final Path ADR_DOMINIO = Path.of("..", "docs", "adr", "ADR-002-dominio-do-projeto.md");
+    private static final Path CONTRATO = Path.of("..", "docs", "contrato.md");
 
     @Test
-    void devePublicarComCloudEventsBinarioEChaveVendaId() {
+    void devePublicarComCloudEventsBinarioEChaveEventoComercialId() {
         Properties configuracao = configuracaoDaAplicacao();
         String topico = configuracao.getProperty("app.kafka.topico-ingresso-emitido");
         String ceSource = configuracao.getProperty("app.kafka.ce-source");
@@ -49,7 +51,9 @@ class PublicacaoIngressoServiceTest {
         ProducerRecord<String, IngressoEmitidoEvent> record = captor.getValue();
 
         assertThat(record.topic()).isEqualTo(topico);
-        assertThat(record.key()).isEqualTo("venda-001");
+        assertThat(record.key())
+                .as("a chave de partição é a unidade cuja ordem o negócio exige, conforme o ADR-002")
+                .isEqualTo("evento-comercial-001");
         assertThat(header(record, CE_SPECVERSION)).isEqualTo("1.0");
         assertThat(header(record, CE_ID))
                 .as("ce_id deve ser a identidade do fato, não a da entidade de negócio")
@@ -63,10 +67,44 @@ class PublicacaoIngressoServiceTest {
     void deveManterGrafiaUnicaDoCeTypeEntreConfiguracaoEAdr() throws Exception {
         String ceType = configuracaoDaAplicacao().getProperty("app.kafka.ce-type-ingresso-emitido");
 
-        assertThat(ADR_DOMINIO).as("ADR-002 deve ser legível a partir do módulo do publisher").exists();
+        exigirDocumentacaoDoRepositorio(ADR_DOMINIO);
         assertThat(Files.readString(ADR_DOMINIO, StandardCharsets.UTF_8))
                 .as("o ce_type publicado deve ter uma grafia só em código e documentação")
                 .contains(ceType);
+    }
+
+    @Test
+    void deveManterGrafiaUnicaDoCeTypeEntreConfiguracaoEContrato() throws Exception {
+        Properties configuracao = configuracaoDaAplicacao();
+        String ceType = configuracao.getProperty("app.kafka.ce-type-ingresso-emitido");
+        String topico = configuracao.getProperty("app.kafka.topico-ingresso-emitido");
+
+        exigirDocumentacaoDoRepositorio(CONTRATO);
+        String contrato = Files.readString(CONTRATO, StandardCharsets.UTF_8);
+
+        assertThat(contrato)
+                .as("o tipo do evento no contrato precisa ser o mesmo que o código publica")
+                .contains(ceType);
+        assertThat(contrato)
+                .as("o tópico documentado precisa ser o mesmo que o código publica")
+                .contains(topico);
+        assertThat(contrato)
+                .as("a chave de partição documentada precisa ser a mesma que o código usa")
+                .contains("eventoComercialId");
+    }
+
+    /**
+     * Os testes de coerência entre código e documentação só fazem sentido quando a suíte roda
+     * de dentro do repositório. A imagem Docker do publisher é construída com a pasta do módulo
+     * como contexto, e ali {@code ../docs} não existe: o módulo é independente de propósito.
+     * Nesse caso o teste é pulado, e não falsamente aprovado — o {@code mvn test} documentado
+     * no README continua sendo o lugar onde a divergência aparece.
+     */
+    private void exigirDocumentacaoDoRepositorio(Path documento) {
+        assumeTrue(
+                Files.exists(documento),
+                () -> documento + " não está acessível; suíte rodando fora do repositório (build da imagem)"
+        );
     }
 
     private Properties configuracaoDaAplicacao() {

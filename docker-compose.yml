@@ -1,6 +1,9 @@
 services:
   kafka:
-    image: bitnami/kafka:3.7
+    # bitnamilegacy/, e não bitnami/: em 2025 a Bitnami retirou o catálogo público do
+    # Docker Hub e moveu as imagens existentes para o repositório legado. É a mesma
+    # imagem 3.7, com o mesmo contrato de variáveis KAFKA_CFG_*.
+    image: bitnamilegacy/kafka:3.7
     container_name: aed-kafka
     ports:
       - "9092:29092"
@@ -47,6 +50,20 @@ services:
       APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
     volumes:
       - consumer-data:/data
+
+  venda-ingressos-painel:
+    build:
+      context: ./venda-ingressos-painel
+    container_name: venda-ingressos-painel
+    depends_on:
+      - kafka
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
+      APP_PAINEL_DURACAO_JANELA: PT5M
+      APP_PAINEL_TOLERANCIA_ATRASO: PT2M
 
 volumes:
   kafka-data:
