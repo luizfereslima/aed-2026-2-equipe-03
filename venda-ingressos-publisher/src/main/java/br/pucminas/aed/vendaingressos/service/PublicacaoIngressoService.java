@@ -39,7 +39,7 @@ public class PublicacaoIngressoService {
 
     public void publicar(IngressoEmitidoEvent evento) {
         ProducerRecord<String, IngressoEmitidoEvent> record =
-                new ProducerRecord<>(topicName, evento.getVendaId(), evento);
+                new ProducerRecord<>(topicName, evento.getEventoComercialId(), evento);
         adicionarHeader(record, CE_SPECVERSION, "1.0");
         adicionarHeader(record, CE_ID, evento.getEventoId());
         adicionarHeader(record, CE_SOURCE, ceSource);
@@ -51,7 +51,11 @@ public class PublicacaoIngressoService {
                 LOGGER.error("Falha ao publicar IngressoEmitidoEvent eventoId={}", evento.getEventoId(), erro);
                 return;
             }
-            LOGGER.info("IngressoEmitidoEvent publicado eventoId={} vendaId={}", evento.getEventoId(), evento.getVendaId());
+            LOGGER.info(
+                    "IngressoEmitidoEvent publicado eventoId={} eventoComercialId={}",
+                    evento.getEventoId(),
+                    evento.getEventoComercialId()
+            );
         });
     }
 
