@@ -61,7 +61,7 @@ Siga os comandos do [README](../../README.md#como-testar).
 ## Quem fez o quê
 
 ```text
-TODO_EQUIPE: Nome — responsabilidade
+Gabriel Grapeggia Ceola — Contrato do evento, painel de vendas com agregação por janela, correção da chave de partição e documentação da etapa.
 TODO_EQUIPE: Nome — responsabilidade
 TODO_EQUIPE: Nome — responsabilidade
 Daniel da Silveira Moreira — Revisão do projeto e avaliação do estado atual da implementação.
