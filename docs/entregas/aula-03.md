@@ -62,7 +62,7 @@ Siga os comandos do [README](../../README.md#como-testar).
 
 ```text
 Gabriel Grapeggia Ceola — Contrato do evento, painel de vendas com agregação por janela, correção da chave de partição e documentação da etapa.
-TODO_EQUIPE: Nome — responsabilidade
+Luiz Felipe Dias Cardoso Feres Lima — Revisao e auxilio nas ideias do projeto.
 TODO_EQUIPE: Nome — responsabilidade
 Daniel da Silveira Moreira — Revisão do projeto e avaliação do estado atual da implementação.
 ```
