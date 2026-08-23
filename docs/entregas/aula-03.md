@@ -64,5 +64,5 @@ Siga os comandos do [README](../../README.md#como-testar).
 TODO_EQUIPE: Nome — responsabilidade
 TODO_EQUIPE: Nome — responsabilidade
 TODO_EQUIPE: Nome — responsabilidade
-TODO_EQUIPE: Nome — responsabilidade
+Daniel da Silveira Moreira — Revisão do projeto e avaliação do estado atual da implementação.
 ```
