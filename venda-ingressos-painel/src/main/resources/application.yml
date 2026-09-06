@@ -10,18 +10,29 @@ spring:
       group-id: venda-ingressos-painel
       auto-offset-reset: earliest
       enable-auto-commit: false
+      # Com o atraso simulado ligado, o ciclo de poll custa max-poll-records x atraso.
+      # 10 x 2 s fica bem abaixo de max.poll.interval.ms, então o grupo não rebalanceia.
+      max-poll-records: 10
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
         spring.json.value.default.type: br.pucminas.aed.vendaingressospainel.domain.IngressoEmitidoEvent
         spring.json.use.type.headers: false
         spring.json.trusted.packages: br.pucminas.aed.vendaingressospainel.domain
+        max.poll.interval.ms: 300000
     listener:
       ack-mode: manual
+      # Uma thread, e não três como no consumer: a apuração inteira é uma seção crítica única
+      # (PainelVendasService é synchronized), então threads paralelas só fariam fila.
+      concurrency: 1
 
 app:
   kafka:
     topico-ingresso-emitido: ingressos.ingresso-emitido.v1
+    topico-ingresso-emitido-dlt: ingressos.ingresso-emitido.v1.dlt-painel
   painel:
     duracao-janela: PT5M
     tolerancia-atraso: PT2M
+    # Freio de demonstração, para tornar o lag observável. Ver README.
+    atraso-simulado: PT0S

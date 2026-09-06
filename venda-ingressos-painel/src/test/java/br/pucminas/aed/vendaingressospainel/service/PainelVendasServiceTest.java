@@ -168,4 +168,32 @@ class PainelVendasServiceTest {
     private IngressoEmitidoEvent evento(String eventoId, String ocorridoEm, String eventoComercialId) {
         return new IngressoEmitidoEvent(eventoId, OffsetDateTime.parse(ocorridoEm), eventoComercialId);
     }
+
+    @Test
+    void naoDeveMarcarComoApuradoUmEventoQueFalhouAntesDeSerContado() {
+        PainelVendasService painel = novoPainel();
+
+        catchThrowable(() -> painel.registrar(new IngressoEmitidoEvent("evento-001", null, SHOW)));
+        painel.registrar(evento("evento-001", "2026-08-16T10:01:00Z", SHOW));
+
+        assertThat(painel.janelas())
+                .as("a memória da deduplicação só pode registrar o que de fato foi contado; "
+                        + "marcar antes de terminar faria a reentrega cair no desvio de duplicata e sumir")
+                .singleElement()
+                .extracting(JanelaVendasVO::getIngressosEmitidos)
+                .isEqualTo(1L);
+    }
+
+    @Test
+    void deveRecusarEventoSemEventoId() {
+        PainelVendasService painel = novoPainel();
+
+        Throwable erro = catchThrowable(
+                () -> painel.registrar(new IngressoEmitidoEvent(null, OffsetDateTime.parse("2026-08-16T10:01:00Z"), SHOW)));
+
+        assertThat(erro)
+                .as("sem eventoId não há deduplicação, e sem deduplicação a contagem repete a cada reentrega")
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(painel.janelas()).isEmpty();
+    }
 }

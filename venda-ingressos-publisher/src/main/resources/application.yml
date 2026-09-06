@@ -9,8 +9,16 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
       properties:
         spring.json.add.type.headers: false
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 120000
+        buffer.memory: 33554432
+        # Backpressure do produtor: esgotados o buffer e a espera, send() falha e a
+        # solicitação é recusada com 503 em vez de enfileirar em memória. Ver ADR-004.
+        max.block.ms: 5000
 
 app:
   kafka:

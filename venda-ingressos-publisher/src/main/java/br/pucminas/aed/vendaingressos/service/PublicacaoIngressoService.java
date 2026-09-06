@@ -3,6 +3,7 @@ package br.pucminas.aed.vendaingressos.service;
 import br.pucminas.aed.vendaingressos.domain.IngressoEmitidoEvent;
 import java.nio.charset.StandardCharsets;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,17 +47,37 @@ public class PublicacaoIngressoService {
         adicionarHeader(record, CE_TYPE, ceType);
         adicionarHeader(record, CE_TIME, evento.getOcorridoEm().toString());
 
-        kafkaTemplate.send(record).whenComplete((resultado, erro) -> {
-            if (erro != null) {
-                LOGGER.error("Falha ao publicar IngressoEmitidoEvent eventoId={}", evento.getEventoId(), erro);
-                return;
-            }
-            LOGGER.info(
-                    "IngressoEmitidoEvent publicado eventoId={} eventoComercialId={}",
+        enviar(record, evento);
+    }
+
+    /**
+     * A falha síncrona (buffer esgotado) recusa a solicitação, porque nada foi aceito. A
+     * assíncrona só é registrada: ali a venda já foi confirmada e o dual-write do ADR-002 já
+     * aconteceu, e a correção é o outbox previsto para a etapa de Event Sourcing.
+     */
+    private void enviar(ProducerRecord<String, IngressoEmitidoEvent> record, IngressoEmitidoEvent evento) {
+        try {
+            kafkaTemplate.send(record).whenComplete((resultado, erro) -> {
+                if (erro != null) {
+                    LOGGER.error("Falha ao publicar IngressoEmitidoEvent eventoId={}", evento.getEventoId(), erro);
+                    return;
+                }
+                LOGGER.info(
+                        "IngressoEmitidoEvent publicado eventoId={} eventoComercialId={}",
+                        evento.getEventoId(),
+                        evento.getEventoComercialId()
+                );
+            });
+        } catch (KafkaException excecao) {
+            LOGGER.error(
+                    "Produtor sem espaço para aceitar IngressoEmitidoEvent eventoId={} eventoComercialId={}",
                     evento.getEventoId(),
-                    evento.getEventoComercialId()
+                    evento.getEventoComercialId(),
+                    excecao
             );
-        });
+            throw new PublicacaoIndisponivelException(
+                    "produtor Kafka sem espaço para aceitar o evento; solicitação recusada", excecao);
+        }
     }
 
     private void adicionarHeader(ProducerRecord<String, IngressoEmitidoEvent> record, String nome, String valor) {
