@@ -157,3 +157,117 @@ Foi recusado hospedar o agregador dentro do consumer da etapa 1.
 **Justificativa técnica da recusa**
 
 Os dois efeitos têm ciclos de vida diferentes: a projeção é transacional em banco e a apuração é em memória, reconstruível por reprocessamento. Juntá-los num processo só acoplaria a disponibilidade de um à do outro e faria um reinício do painel arrastar o consumer. Além disso, a etapa avalia a independência entre grupos de consumidores, e ela fica demonstrável quando os dois processos sobem lado a lado e ambos recebem todas as mensagens do tópico.
+
+## Aula 04
+
+> `TODO_EQUIPE:` as decisões abaixo foram propostas pela IA a partir do estado do repositório e ainda **não** foram validadas pela equipe. O ADR-004 está como *Proposta* pelo mesmo motivo. Revisar, aceitar ou recusar, e então ajustar este registro.
+
+### Interação 1 — programação reativa
+
+**O que foi pedido**
+
+Definir como introduzir backpressure no sistema, dado que a aula trata de Programação Reativa e Backpressure.
+
+**O que a IA sugeriu**
+
+Comparar a adoção de Reactor (`reactor-kafka` nos consumidores, WebFlux no publisher) com tornar explícito o controle de fluxo que o consumidor Kafka já exerce.
+
+**O que foi aceito**
+
+Foi aceito tornar explícito o mecanismo existente: `max.poll.records` escolhido em função do custo por registro, `concurrency` decidido por consumidor, e `ack-mode: manual` com confirmação após o retorno do service.
+
+**O que foi recusado**
+
+Foi recusada a adoção de Reactor nesta etapa.
+
+**Justificativa técnica da recusa**
+
+O consumidor Kafka já é *pull-based*: o contêiner não busca o próximo lote antes de terminar o anterior, e a fila fica no broker em vez de na memória do processo. Backpressure é o comportamento nativo do laço de poll, não algo que faltasse. Acrescentar `Flux` por cima seria uma segunda camada de controle de fluxo sobre uma que já funciona, contra a proibição de overengineering da constituição. A recusa está condicionada ao enunciado: se ele exigir programação reativa nominalmente, o ADR-004 precisa ser revisto — há um `TODO_EQUIPE` registrado ali para isso.
+
+### Interação 2 — política de retry
+
+**O que foi pedido**
+
+Definir o que os consumidores fazem diante de uma mensagem que falha no processamento.
+
+**O que a IA sugeriu**
+
+Comparar uma política única de retry para toda falha com a classificação da falha em transitória e não repetível.
+
+**O que foi aceito**
+
+Foi aceita a classificação: falha transitória é repetida com espera dobrando de 1 s até 30 s; falha de desserialização e violação de contrato vão direto ao tópico de descarte.
+
+**O que foi recusado**
+
+Foi recusada a política única de retry, em qualquer das duas formas — tentar sempre, ou desistir sempre.
+
+**Justificativa técnica da recusa**
+
+As duas falhas têm naturezas opostas. Insistir numa carga malformada dá o mesmo resultado em todas as tentativas e trava a partição enquanto isso; desistir de uma falha de banco descarta uma mensagem íntegra por causa de uma indisponibilidade que ia passar. A espera crescente existe pelo mesmo motivo: retry imediato contra um recurso já sobrecarregado é tempestade, não recuperação.
+
+### Interação 3 — tópico de descarte
+
+**O que foi pedido**
+
+Definir se o `venda-ingressos-consumer` e o `venda-ingressos-painel` compartilhariam um tópico de descarte.
+
+**O que a IA sugeriu**
+
+Comparar um tópico único, mais simples de operar, com um tópico por consumidor.
+
+**O que foi aceito**
+
+Foi aceito um tópico de descarte por consumidor.
+
+**O que foi recusado**
+
+Foi recusado o tópico compartilhado.
+
+**Justificativa técnica da recusa**
+
+Os dois grupos falham por motivos diferentes sobre a mesma mensagem. Uma carga sem `ocorridoEm` é fatal para a janela do painel e irrelevante para a projeção, que nem lê aquele campo para decidir. Um descarte comum misturaria as duas histórias e tiraria de cada consumidor o direito de ter a própria política de falha — que é justamente o que a independência entre grupos, estabelecida na Aula 03, deveria preservar.
+
+### Interação 4 — ordem da deduplicação no painel
+
+**O que foi pedido**
+
+Revisar o `PainelVendasService` diante da introdução de retry e de tópico de descarte.
+
+**O que a IA sugeriu**
+
+A IA apontou que o `registrar` inseria o `eventoId` no conjunto de eventos apurados antes de calcular a janela, que podia lançar em seguida — de modo que um evento que falhasse ficaria marcado como apurado sem nunca ter sido contado, e a reentrega cairia no desvio de duplicata.
+
+**O que foi aceito**
+
+Foi aceita a inversão da ordem para validar, marcar e então contar, com teste de regressão cobrindo a reentrega após falha.
+
+**O que foi recusado**
+
+Foi recusada a alternativa de remover o `eventoId` do conjunto dentro de um bloco de tratamento de exceção.
+
+**Justificativa técnica da recusa**
+
+Desfazer a marca no caminho de exceção depende de o tratamento cobrir toda exceção possível, inclusive as que ainda não existem no método. A ordem correta não depende de ninguém lembrar disso: enquanto a marca vier depois de tudo que pode falhar, não há o que desfazer. É o mesmo princípio que o `venda-ingressos-consumer` obtém do `@Transactional`.
+
+### Interação 5 — serializador do tópico de descarte
+
+**O que foi pedido**
+
+Definir como a carga que falhou na desserialização é escrita no tópico de descarte, já que ela não é um objeto do domínio e sim bytes crus.
+
+**O que a IA sugeriu**
+
+Comparar um serializador que despacha por tipo — bytes crus preservados como bytes, objeto serializado em JSON — com o uso do `JsonSerializer` para os dois casos.
+
+**O que foi aceito**
+
+Foi aceito o `JsonSerializer` único, com a consequência de que a carga malformada chega ao descarte em base64.
+
+**O que foi recusado**
+
+Foi recusado o serializador que despacha por tipo.
+
+**Justificativa técnica da recusa**
+
+Perde-se legibilidade imediata da carga malformada e ganha-se um caminho só, sem uma segunda peça de configuração para manter. Os cabeçalhos de diagnóstico que o Spring acrescenta continuam legíveis, e são eles que dizem qual foi a exceção, o tópico, a partição e o offset de origem — que é o que se procura primeiro ao investigar um descarte. A decisão está registrada como consequência aceita no ADR-004, e não como detalhe de implementação.

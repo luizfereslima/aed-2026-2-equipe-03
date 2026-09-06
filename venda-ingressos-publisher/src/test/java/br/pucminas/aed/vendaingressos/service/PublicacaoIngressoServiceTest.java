@@ -6,6 +6,7 @@ import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.C
 import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.CE_TIME;
 import static br.pucminas.aed.vendaingressos.service.PublicacaoIngressoService.CE_TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -20,6 +21,7 @@ import java.time.OffsetDateTime;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.KafkaException;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
@@ -128,5 +130,26 @@ class PublicacaoIngressoServiceTest {
 
     private String header(ProducerRecord<String, IngressoEmitidoEvent> record, String nome) {
         return new String(record.headers().lastHeader(nome).value(), StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void deveRecusarASolicitacaoQuandoOProdutorNaoTemEspacoParaAceitarOEvento() {
+        KafkaTemplate<String, IngressoEmitidoEvent> kafkaTemplate = mock(KafkaTemplate.class);
+        when(kafkaTemplate.send(any(ProducerRecord.class)))
+                .thenThrow(new KafkaException("buffer do produtor esgotado"));
+
+        PublicacaoIngressoService service = new PublicacaoIngressoService(
+                kafkaTemplate,
+                "ingressos.ingresso-emitido.v1",
+                "/venda-ingressos-publisher",
+                "ingressos.ingresso.emitido.v1"
+        );
+
+        Throwable erro = catchThrowable(() -> service.publicar(eventoDeExemplo()));
+
+        assertThat(erro)
+                .as("buffer esgotado é backpressure; aceitar em silêncio devolveria 202 para um evento que não existe")
+                .isInstanceOf(PublicacaoIndisponivelException.class)
+                .hasCauseInstanceOf(KafkaException.class);
     }
 }

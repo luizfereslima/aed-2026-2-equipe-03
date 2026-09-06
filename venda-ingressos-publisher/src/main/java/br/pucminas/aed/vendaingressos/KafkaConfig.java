@@ -9,10 +9,14 @@ import org.springframework.kafka.config.TopicBuilder;
 @Configuration
 public class KafkaConfig {
 
+    /**
+     * Três partições desde a Aula 04. A chave continua sendo o {@code eventoComercialId}, então
+     * a ordem por evento comercial segue garantida. Ver ADR-004.
+     */
     @Bean
     public NewTopic ingressoEmitidoTopic(@Value("${app.kafka.topico-ingresso-emitido}") String topicName) {
         return TopicBuilder.name(topicName)
-                .partitions(1)
+                .partitions(3)
                 .replicas(1)
                 .build();
     }

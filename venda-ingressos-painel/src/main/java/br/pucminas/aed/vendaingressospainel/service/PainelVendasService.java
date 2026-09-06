@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * Responde à pergunta do organizador: quantos ingressos foram emitidos para cada evento
@@ -54,13 +55,21 @@ public class PainelVendasService {
         this.toleranciaDeAtraso = toleranciaDeAtraso;
     }
 
+    /**
+     * Validar, marcar, contar — nessa ordem. A marca é a memória da deduplicação, e marcá-la
+     * antes de terminar faria a reentrega cair no desvio de duplicata: o evento sumiria sem
+     * nunca ter sido contado. É o que o {@code venda-ingressos-consumer} obtém de graça com
+     * {@code @Transactional}; aqui o estado é de memória e a atomicidade vem da ordem.
+     */
     public synchronized void registrar(IngressoEmitidoEvent evento) {
+        exigirEventoId(evento);
+        OffsetDateTime ocorridoEm = relogioOcorrenciaService.instanteDoFato(evento);
+
         if (!eventosApurados.add(evento.getEventoId())) {
             LOGGER.debug("Evento já apurado, ignorado eventoId={}", evento.getEventoId());
             return;
         }
 
-        OffsetDateTime ocorridoEm = relogioOcorrenciaService.instanteDoFato(evento);
         ChaveJanela chave = new ChaveJanela(
                 evento.getEventoComercialId(),
                 janelaService.inicioDaJanela(ocorridoEm, duracaoDaJanela)
@@ -77,6 +86,19 @@ public class PainelVendasService {
                     chave.inicio().plus(duracaoDaJanela),
                     apuracao.ingressosEmitidos,
                     evento.getEventoId()
+            );
+        }
+    }
+
+    /**
+     * Sem {@code eventoId} não há deduplicação, e a contagem repetiria a cada reentrega. A
+     * recusa é explícita porque a alternativa seria um {@code NullPointerException} vindo de
+     * dentro do conjunto de eventos apurados, que não aceita nulo.
+     */
+    private void exigirEventoId(IngressoEmitidoEvent evento) {
+        if (!StringUtils.hasText(evento.getEventoId())) {
+            throw new IllegalArgumentException(
+                    "eventoId é obrigatório no contrato e é a chave de deduplicação; evento sem ele não é agregável"
             );
         }
     }

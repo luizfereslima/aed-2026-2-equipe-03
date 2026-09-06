@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class IngressoService {
@@ -22,6 +23,8 @@ public class IngressoService {
 
     @Transactional
     public void processar(IngressoEmitidoEvent evento) {
+        exigirEventoId(evento);
+
         if (eventoProcessadoRepository.existsById(evento.getEventoId())) {
             return;
         }
@@ -37,5 +40,18 @@ public class IngressoService {
                 evento.getEventoId(),
                 OffsetDateTime.now(ZoneOffset.UTC)
         ));
+    }
+
+    /**
+     * Sem {@code eventoId} não existe chave de deduplicação, então não há como ser idempotente
+     * — e insistir não conserta a carga. A exceção está classificada como não repetível no
+     * {@code KafkaConfig}, e leva a mensagem direto ao tópico de descarte.
+     */
+    private void exigirEventoId(IngressoEmitidoEvent evento) {
+        if (!StringUtils.hasText(evento.getEventoId())) {
+            throw new IllegalArgumentException(
+                    "eventoId é obrigatório no contrato e é a chave de deduplicação; evento sem ele não é processável"
+            );
+        }
     }
 }

@@ -85,8 +85,8 @@ Foi essa a unidade escolhida porque é a menor cuja ordem o negócio exige: ocup
 
 Duas ressalvas honestas:
 
-- **O tópico é criado com uma partição só** (`KafkaConfig`, no publisher). Na prática isso hoje produz ordem total. O contrato **não** promete ordem total: quem consumir deve assumir apenas a ordem por evento comercial, porque o número de partições vai crescer.
-- **A chave concentra carga.** Todo o pico de abertura de vendas de um show grande cai numa partição só. O risco está registrado como consequência aceita no ADR-002, com a mitigação prevista para a Aula 04 (medir o desequilíbrio antes de mudar, e avaliar chave composta evento comercial + setor, aceitando que a ordem passaria a ser por setor).
+- **O tópico é criado com três partições** (`KafkaConfig`, no publisher). Até a Aula 04 era uma só, e na prática isso produzia ordem total — uma garantia mais forte do que a prometida aqui. Quem tiver assumido ordem total sem ler este documento vai notar a diferença agora. O contrato continua prometendo apenas a ordem por evento comercial, e o número de partições pode crescer de novo.
+- **A chave concentra carga.** Todo o pico de abertura de vendas de um show grande cai numa partição só. O risco está registrado como consequência aceita no ADR-002. O aumento para três partições, decidido no [ADR-004](adr/ADR-004-backpressure-e-falha-no-consumo.md), é o pré-requisito da medição de desequilíbrio prevista lá — com uma partição não havia desequilíbrio a medir. A avaliação da chave composta evento comercial + setor, que trocaria a ordem garantida para a de setor, **continua parada** até a medição.
 
 ## Regra de compatibilidade: FULL
 

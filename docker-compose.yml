@@ -20,13 +20,20 @@ services:
       ALLOW_PLAINTEXT_LISTENER: "yes"
     volumes:
       - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
 
   venda-ingressos-publisher:
     build:
       context: ./venda-ingressos-publisher
     container_name: venda-ingressos-publisher
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -40,7 +47,8 @@ services:
       context: ./venda-ingressos-consumer
     container_name: venda-ingressos-consumer
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
@@ -48,6 +56,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:h2:file:/data/consumer-db
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
+      APP_KAFKA_TOPICO_INGRESSO_EMITIDO_DLT: ingressos.ingresso-emitido.v1.dlt-consumer
     volumes:
       - consumer-data:/data
 
@@ -56,14 +65,18 @@ services:
       context: ./venda-ingressos-painel
     container_name: venda-ingressos-painel
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     ports:
       - "8082:8082"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPICO_INGRESSO_EMITIDO: ingressos.ingresso-emitido.v1
+      APP_KAFKA_TOPICO_INGRESSO_EMITIDO_DLT: ingressos.ingresso-emitido.v1.dlt-painel
       APP_PAINEL_DURACAO_JANELA: PT5M
       APP_PAINEL_TOLERANCIA_ATRASO: PT2M
+      # Freio de demonstração: suba para PT2S para ver o lag crescer. Ver README.
+      APP_PAINEL_ATRASO_SIMULADO: PT0S
 
 volumes:
   kafka-data:
