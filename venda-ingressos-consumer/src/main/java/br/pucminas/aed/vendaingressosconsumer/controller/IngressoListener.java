@@ -1,6 +1,7 @@
 package br.pucminas.aed.vendaingressosconsumer.controller;
 
 import br.pucminas.aed.vendaingressosconsumer.domain.IngressoEmitidoEvent;
+import br.pucminas.aed.vendaingressosconsumer.domain.IngressoInvalidadoEvent;
 import br.pucminas.aed.vendaingressosconsumer.service.IngressoService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
@@ -18,6 +19,15 @@ public class IngressoListener {
     @KafkaListener(topics = "${app.kafka.topico-ingresso-emitido}")
     public void receber(IngressoEmitidoEvent evento, Acknowledgment acknowledgment) {
         ingressoService.processar(evento);
+        acknowledgment.acknowledge();
+    }
+
+    @KafkaListener(
+            topics = "${app.kafka.topico-ingresso-invalidado}",
+            containerFactory = "invalidacaoKafkaListenerContainerFactory"
+    )
+    public void receberInvalidacao(IngressoInvalidadoEvent evento, Acknowledgment acknowledgment) {
+        ingressoService.invalidar(evento);
         acknowledgment.acknowledge();
     }
 }

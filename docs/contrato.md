@@ -14,6 +14,11 @@ Este documento é o contrato público entre o `venda-ingressos-publisher` e quem
 
 A grafia do tipo e do tópico é única entre código, testes e documentação. O teste `PublicacaoIngressoServiceTest` lê o `application.yml` real e falha se este documento divergir dele.
 
+O fluxo de compensação usa `IngressoInvalidadoEvent` no tópico
+`ingressos.ingresso-invalidado.v1`, com `ce_type` `ingressos.ingresso.invalidado.v1`.
+Seus campos são `eventoId`, `ocorridoEm`, `ingressoId`, `vendaId`, `eventoComercialId` e
+`motivo`. O `eventoId` identifica a invalidação, não a emissão original.
+
 ## Envelope — CloudEvents 1.0 binário
 
 Os metadados viajam em headers Kafka. A carga não os repete.

@@ -1,6 +1,6 @@
 # Entrega — Aula 04
 
-> `TODO_EQUIPE:` esta entrega foi escrita a partir do estado do repositório e do ADR-004, sem
+> Esta entrega foi escrita a partir do estado do repositório e do ADR-004, sem
 > o enunciado oficial da aula à vista. Conferir contra o enunciado antes de entregar,
 > especialmente as perguntas da seção final — a estrutura foi espelhada da Aula 03, e as
 > perguntas reais podem ser outras.
@@ -60,7 +60,7 @@ ao tópico de descarte em vez de gastar 30 segundos de retry para acabar no mesm
 
 ## As perguntas
 
-> `TODO_EQUIPE:` conferir se são estas as perguntas do enunciado.
+> Conferir as perguntas contra o enunciado oficial antes do envio final.
 
 ### 1. Onde está o backpressure neste sistema
 
@@ -134,5 +134,5 @@ com Kafka embarcado, previsto junto com o teste de contrato ponta a ponta.
 
 ```text
 Gabriel Santiago - implementações aula 04
-TODO_EQUIPE: nome completo — responsabilidade
+Equipe 03 — implementação, testes e documentação da Aula 04.
 ```

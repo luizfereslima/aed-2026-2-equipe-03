@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import br.pucminas.aed.vendaingressosconsumer.domain.IngressoEmitidoEvent;
+import br.pucminas.aed.vendaingressosconsumer.domain.IngressoInvalidadoEvent;
 import java.time.OffsetDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,5 +74,24 @@ class IngressoServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(ingressoEmitidoRepository.count()).isZero();
         assertThat(eventoProcessadoRepository.count()).isZero();
+    }
+
+    @Test
+    void deveInvalidarIngressoSemRepetirCompensacao() {
+        ingressoService.processar(new IngressoEmitidoEvent(
+                "emissao-001", OffsetDateTime.parse("2026-08-16T10:15:30Z"),
+                "ingresso-001", "venda-001", "evento-comercial-001"));
+
+        IngressoInvalidadoEvent invalidacao = new IngressoInvalidadoEvent(
+                "invalidacao-001", OffsetDateTime.parse("2026-08-16T10:20:00Z"),
+                "ingresso-001", "venda-001", "evento-comercial-001", "cancelamento do evento");
+
+        ingressoService.invalidar(invalidacao);
+        ingressoService.invalidar(invalidacao);
+
+        IngressoEmitidoVO ingresso = ingressoEmitidoRepository.findByIngressoId("ingresso-001").orElseThrow();
+        assertThat(ingresso.getSituacao()).isEqualTo("INVALIDADO");
+        assertThat(ingresso.getMotivoInvalidacao()).isEqualTo("cancelamento do evento");
+        assertThat(eventoProcessadoRepository.count()).isEqualTo(2);
     }
 }

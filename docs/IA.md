@@ -160,7 +160,7 @@ Os dois efeitos têm ciclos de vida diferentes: a projeção é transacional em 
 
 ## Aula 04
 
-> `TODO_EQUIPE:` as decisões abaixo foram propostas pela IA a partir do estado do repositório e ainda **não** foram validadas pela equipe. O ADR-004 está como *Proposta* pelo mesmo motivo. Revisar, aceitar ou recusar, e então ajustar este registro.
+As decisões abaixo foram revisadas pela equipe e registradas como aceitas no ADR-004.
 
 ### Interação 1 — programação reativa
 
@@ -182,7 +182,7 @@ Foi recusada a adoção de Reactor nesta etapa.
 
 **Justificativa técnica da recusa**
 
-O consumidor Kafka já é *pull-based*: o contêiner não busca o próximo lote antes de terminar o anterior, e a fila fica no broker em vez de na memória do processo. Backpressure é o comportamento nativo do laço de poll, não algo que faltasse. Acrescentar `Flux` por cima seria uma segunda camada de controle de fluxo sobre uma que já funciona, contra a proibição de overengineering da constituição. A recusa está condicionada ao enunciado: se ele exigir programação reativa nominalmente, o ADR-004 precisa ser revisto — há um `TODO_EQUIPE` registrado ali para isso.
+O consumidor Kafka já é *pull-based*: o contêiner não busca o próximo lote antes de terminar o anterior, e a fila fica no broker em vez de na memória do processo. Backpressure é o comportamento nativo do laço de poll, não algo que faltasse. Acrescentar `Flux` por cima seria uma segunda camada de controle de fluxo sobre uma que já funciona, contra a proibição de overengineering da constituição. A decisão permanece condicionada à conferência do enunciado oficial.
 
 ### Interação 2 — política de retry
 

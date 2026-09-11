@@ -2,9 +2,8 @@
 
 ## Status
 
-Proposta · 2026-09-06 · Equipe 03
+Aceita · 2026-09-11 · Equipe 03
 
-> `TODO_EQUIPE:` mudar para *Aceita* quando a equipe validar a etapa.
 
 ## Contexto
 
@@ -46,7 +45,7 @@ depois do retorno do service, somado a `max-poll-records`, é o sinal de demanda
 `Flux` por cima disso adicionaria uma segunda camada de controle de fluxo sobre uma que já
 funciona, contra a proibição de overengineering da constituição.
 
-> `TODO_EQUIPE:` conferir contra o enunciado da aula. Se ele exigir nominalmente programação
+> Conferir contra o enunciado da aula. Se ele exigir nominalmente programação
 > reativa, o menor movimento defensável é `reactor-kafka` **apenas no painel**, mantendo o
 > `venda-ingressos-consumer` como está — e este ADR precisa ser revisto, não contornado.
 
@@ -134,7 +133,7 @@ visível em vez de virar erro de acesso a dados lá adiante.
 ## Alternativas consideradas
 
 - **Trocar por Reactor / WebFlux / `reactor-kafka`.** Recusada por ora — ver decisão 1 e o
-  `TODO_EQUIPE` que ela carrega.
+  ressalva que ela carrega.
 - **Fila em memória no publisher para absorver pico.** Recusada. Move a fila para dentro do
   processo, onde ela não é durável nem observável, e troca uma recusa honesta por
   `OutOfMemoryError` mais tarde.

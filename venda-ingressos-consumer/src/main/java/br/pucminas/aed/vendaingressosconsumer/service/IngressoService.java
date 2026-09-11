@@ -1,6 +1,7 @@
 package br.pucminas.aed.vendaingressosconsumer.service;
 
 import br.pucminas.aed.vendaingressosconsumer.domain.IngressoEmitidoEvent;
+import br.pucminas.aed.vendaingressosconsumer.domain.IngressoInvalidadoEvent;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import org.springframework.stereotype.Service;
@@ -42,13 +43,32 @@ public class IngressoService {
         ));
     }
 
+    @Transactional
+    public void invalidar(IngressoInvalidadoEvent evento) {
+        exigirEventoId(evento.getEventoId());
+        if (eventoProcessadoRepository.existsById(evento.getEventoId())) {
+            return;
+        }
+
+        IngressoEmitidoVO ingresso = ingressoEmitidoRepository.findByIngressoId(evento.getIngressoId())
+                .orElseThrow(() -> new IllegalArgumentException("ingresso emitido não encontrado"));
+        ingresso.invalidar(evento.getMotivo(), evento.getOcorridoEm());
+        ingressoEmitidoRepository.save(ingresso);
+        eventoProcessadoRepository.save(new EventoProcessadoVO(
+                evento.getEventoId(), OffsetDateTime.now(ZoneOffset.UTC)));
+    }
+
     /**
      * Sem {@code eventoId} não existe chave de deduplicação, então não há como ser idempotente
      * — e insistir não conserta a carga. A exceção está classificada como não repetível no
      * {@code KafkaConfig}, e leva a mensagem direto ao tópico de descarte.
      */
     private void exigirEventoId(IngressoEmitidoEvent evento) {
-        if (!StringUtils.hasText(evento.getEventoId())) {
+        exigirEventoId(evento.getEventoId());
+    }
+
+    private void exigirEventoId(String eventoId) {
+        if (!StringUtils.hasText(eventoId)) {
             throw new IllegalArgumentException(
                     "eventoId é obrigatório no contrato e é a chave de deduplicação; evento sem ele não é processável"
             );

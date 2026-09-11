@@ -9,7 +9,6 @@ Luiz Felipe Dias Cardoso Feres Lima — 254124
 Gabriel Santiago Silva - 258220
 Gabriel Grapeggia Ceola - 255596
 Daniel da Silveira Moreira - 255927
-TODO_EQUIPE: nome completo — matrícula
 ```
 
 ## Líder
@@ -44,6 +43,11 @@ Banco H2                       Janelas de 5 min em memória
 O `venda-ingressos-publisher` recebe uma solicitação HTTP, executa o fluxo inicial de venda de ingresso com gateway de pagamento simulado e publica o evento `IngressoEmitidoEvent`.
 
 O `venda-ingressos-consumer` consome o evento, verifica idempotência por `eventoId` e registra a projeção/auditoria de ingressos emitidos em banco relacional.
+
+Para demonstrar compensação, publique `IngressoInvalidadoEvent` pelo endpoint
+`POST /vendas-ingressos/{ingressoId}/invalidacao`. O consumer altera a projeção para
+`INVALIDADO`, sem apagar o registro. Consulte o resultado em
+`GET http://localhost:8081/ingressos/{ingressoId}`.
 
 O `venda-ingressos-painel` consome o **mesmo** tópico em um **grupo de consumidores próprio** e agrega quantos ingressos foram emitidos por evento comercial a cada cinco minutos, pela hora de ocorrência do fato. Os dois consumidores recebem todas as mensagens; nenhum tira mensagem do outro.
 
@@ -82,8 +86,10 @@ O Kafka roda em modo KRaft, sem ZooKeeper. A imagem vem de `bitnamilegacy/kafka`
 │   ├── adr
 │   │   ├── ADR-002-dominio-do-projeto.md
 │   │   ├── ADR-003-agregacao-por-janela.md
-│   │   └── ADR-004-backpressure-e-falha-no-consumo.md
+│   │   ├── ADR-004-backpressure-e-falha-no-consumo.md
+│   │   └── ADR-006-saga-de-compensacao.md
 │   ├── contrato.md
+│   ├── arquitetura.md
 │   ├── entregas
 │   │   ├── aula-02.md
 │   │   ├── aula-03.md
@@ -187,6 +193,18 @@ curl -i -X POST http://localhost:8080/vendas-ingressos \
 ```
 
 A API deve responder `202 Accepted`. O evento publicado usa CloudEvents 1.0 em modo binário.
+
+Para invalidar um ingresso já emitido:
+
+```bash
+curl -i -X POST http://localhost:8080/vendas-ingressos/INGRESSO_ID/invalidacao \
+  -H "Content-Type: application/json" \
+  -d '{"vendaId":"venda-001","eventoComercialId":"evento-comercial-001","motivo":"cancelamento do evento"}'
+```
+
+Depois, consulte a projeção em `http://localhost:8081/ingressos/INGRESSO_ID` e verifique
+`situacao: INVALIDADO`. Repetir o mesmo evento Kafka com o mesmo `eventoId` não duplica a
+compensação.
 
 ## Como subir o painel de vendas
 

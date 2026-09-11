@@ -41,4 +41,6 @@ spring:
 app:
   kafka:
     topico-ingresso-emitido: ingressos.ingresso-emitido.v1
+    topico-ingresso-invalidado: ingressos.ingresso-invalidado.v1
     topico-ingresso-emitido-dlt: ingressos.ingresso-emitido.v1.dlt-consumer
+    topico-ingresso-invalidado-dlt: ingressos.ingresso-invalidado.v1.dlt-consumer

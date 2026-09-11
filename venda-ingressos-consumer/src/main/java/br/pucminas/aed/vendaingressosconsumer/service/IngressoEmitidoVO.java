@@ -19,6 +19,10 @@ public class IngressoEmitidoVO {
     private String eventoComercialId;
     private OffsetDateTime emitidoEm;
 
+    private String situacao;
+    private String motivoInvalidacao;
+    private OffsetDateTime invalidadoEm;
+
     protected IngressoEmitidoVO() {
     }
 
@@ -34,6 +38,7 @@ public class IngressoEmitidoVO {
         this.vendaId = vendaId;
         this.eventoComercialId = eventoComercialId;
         this.emitidoEm = emitidoEm;
+        this.situacao = "EMITIDO";
     }
 
     public Long getId() {
@@ -58,5 +63,15 @@ public class IngressoEmitidoVO {
 
     public OffsetDateTime getEmitidoEm() {
         return emitidoEm;
+    }
+
+    public String getSituacao() { return situacao; }
+    public String getMotivoInvalidacao() { return motivoInvalidacao; }
+    public OffsetDateTime getInvalidadoEm() { return invalidadoEm; }
+
+    public void invalidar(String motivo, OffsetDateTime ocorridoEm) {
+        this.situacao = "INVALIDADO";
+        this.motivoInvalidacao = motivo;
+        this.invalidadoEm = ocorridoEm;
     }
 }

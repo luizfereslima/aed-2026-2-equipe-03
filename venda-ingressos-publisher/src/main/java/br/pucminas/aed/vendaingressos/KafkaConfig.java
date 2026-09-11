@@ -20,4 +20,9 @@ public class KafkaConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic ingressoInvalidadoTopic(@Value("${app.kafka.topico-ingresso-invalidado}") String topicName) {
+        return TopicBuilder.name(topicName).partitions(3).replicas(1).build();
+    }
 }
