@@ -96,10 +96,16 @@ public class PainelVendasService {
      * dentro do conjunto de eventos apurados, que não aceita nulo.
      */
     private void exigirEventoId(IngressoEmitidoEvent evento) {
-        if (!StringUtils.hasText(evento.getEventoId())) {
+        if (evento == null || !StringUtils.hasText(evento.getEventoId())) {
             throw new IllegalArgumentException(
                     "eventoId é obrigatório no contrato e é a chave de deduplicação; evento sem ele não é agregável"
             );
+        }
+        if (evento.getOcorridoEm() == null) {
+            throw new IllegalArgumentException("ocorridoEm é obrigatório para definir a janela do evento");
+        }
+        if (!StringUtils.hasText(evento.getEventoComercialId())) {
+            throw new IllegalArgumentException("eventoComercialId é obrigatório para agregar a janela");
         }
     }
 

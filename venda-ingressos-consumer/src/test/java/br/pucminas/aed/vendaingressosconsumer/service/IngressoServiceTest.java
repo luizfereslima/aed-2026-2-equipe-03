@@ -77,6 +77,24 @@ class IngressoServiceTest {
     }
 
     @Test
+    void deveRecusarEventoSemOcorridoEmSemGravarNada() {
+        IngressoEmitidoEvent semData = new IngressoEmitidoEvent(
+                "evento-001",
+                null,
+                "ingresso-001",
+                "venda-001",
+                "evento-comercial-001"
+        );
+
+        Throwable erro = catchThrowable(() -> ingressoService.processar(semData));
+
+        assertThat(erro).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("ocorridoEm");
+        assertThat(ingressoEmitidoRepository.count()).isZero();
+        assertThat(eventoProcessadoRepository.count()).isZero();
+    }
+
+    @Test
     void deveInvalidarIngressoSemRepetirCompensacao() {
         ingressoService.processar(new IngressoEmitidoEvent(
                 "emissao-001", OffsetDateTime.parse("2026-08-16T10:15:30Z"),
@@ -93,5 +111,23 @@ class IngressoServiceTest {
         assertThat(ingresso.getSituacao()).isEqualTo("INVALIDADO");
         assertThat(ingresso.getMotivoInvalidacao()).isEqualTo("cancelamento do evento");
         assertThat(eventoProcessadoRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void deveRecusarCompensacaoSemMotivoAntesDeConsultarAProjecao() {
+        IngressoInvalidadoEvent semMotivo = new IngressoInvalidadoEvent(
+                "invalidacao-001",
+                OffsetDateTime.parse("2026-08-16T10:20:00Z"),
+                "ingresso-001",
+                "venda-001",
+                "evento-comercial-001",
+                null
+        );
+
+        Throwable erro = catchThrowable(() -> ingressoService.invalidar(semMotivo));
+
+        assertThat(erro).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("motivo");
+        assertThat(eventoProcessadoRepository.count()).isZero();
     }
 }

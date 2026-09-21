@@ -54,7 +54,7 @@ O `venda-ingressos-painel` consome o **mesmo** tópico em um **grupo de consumid
 Cada consumidor tem um **tópico de descarte próprio**. A mensagem que não pode ser processada
 — carga malformada, ou evento sem os campos de que aquele consumidor depende — é encaminhada
 para lá em vez de travar a partição ou sumir. Falha transitória, ao contrário, é repetida com
-espera crescente até 30 segundos. O porquê da distinção está no
+espera crescente em quatro tentativas (1 s, 2 s, 4 s e 8 s). O porquê da distinção está no
 [ADR-004](docs/adr/ADR-004-backpressure-e-falha-no-consumo.md).
 
 O contrato do evento está em [docs/contrato.md](docs/contrato.md).
@@ -87,9 +87,11 @@ O Kafka roda em modo KRaft, sem ZooKeeper. A imagem vem de `bitnamilegacy/kafka`
 │   │   ├── ADR-002-dominio-do-projeto.md
 │   │   ├── ADR-003-agregacao-por-janela.md
 │   │   ├── ADR-004-backpressure-e-falha-no-consumo.md
-│   │   └── ADR-006-saga-de-compensacao.md
+│   │   ├── ADR-006-saga-de-compensacao.md
+│   │   └── ADR-006-resiliencia.md
 │   ├── contrato.md
 │   ├── arquitetura.md
+│   ├── apresentacao.pdf
 │   ├── entregas
 │   │   ├── aula-02.md
 │   │   ├── aula-03.md
@@ -423,6 +425,20 @@ processando as mensagens seguintes, e nada é descartado em silêncio.
 O tópico de descarte não tem consumidor automático. Reprocessar é uma decisão manual, tomada
 depois de olhar o que está lá.
 
+Para reprocessar uma mensagem específica depois de corrigir a causa, consulte a partição e o
+offset no tópico de descarte e chame o endpoint operacional do consumer. O endpoint preserva os
+bytes, a chave, a partição e os cabeçalhos CloudEvents, inclusive `ce_id`:
+
+```bash
+curl -i -X POST http://localhost:8081/operacoes/dlq/reprocessamentos \
+  -H "Content-Type: application/json" \
+  -d '{"topico":"ingressos.ingresso-emitido.v1.dlt-consumer","particao":0,"offset":12}'
+```
+
+O endpoint aceita somente as DLTs do consumer, uma mensagem por chamada. Não use em laço e não
+reprocesse antes de corrigir a causa. Reprocessar duas vezes o mesmo evento é seguro para a
+projeção porque a deduplicação usa `eventoId`.
+
 ## Como verificar idempotência
 
 O teste automatizado do consumer entrega o mesmo `IngressoEmitidoEvent` três vezes e valida que:
@@ -501,14 +517,12 @@ git config user.email "EMAIL_CADASTRADO_NO_GITHUB"
 
 ## Tag de entrega
 
-Crie a tag somente quando a equipe validar a entrega:
+O marco final desta entrega é a tag anotada `entrega-final`, criada sobre o commit que contém o
+código, a documentação e os slides:
 
 ```bash
-git tag -a entrega-aula-04 -m "Etapa 3: backpressure e politica de falha"
+git tag -a entrega-final -m "Projeto final - Unidade IV"
 ```
 
-```bash
-git push origin entrega-aula-04
-```
-
-Não crie a tag antes da validação final da equipe.
+Não crie outra tag para substituir este marco. O envio da tag ao repositório remoto é uma operação
+separada da criação local e deve ser feito pela equipe após validar o commit.

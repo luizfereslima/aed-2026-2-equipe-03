@@ -271,3 +271,111 @@ Foi recusado o serializador que despacha por tipo.
 **Justificativa técnica da recusa**
 
 Perde-se legibilidade imediata da carga malformada e ganha-se um caminho só, sem uma segunda peça de configuração para manter. Os cabeçalhos de diagnóstico que o Spring acrescenta continuam legíveis, e são eles que dizem qual foi a exceção, o tópico, a partição e o offset de origem — que é o que se procura primeiro ao investigar um descarte. A decisão está registrada como consequência aceita no ADR-004, e não como detalhe de implementação.
+
+## Aula 06 — Projeto final
+
+### Interação 1 — quantidade de retries e destino da falha
+
+**O que foi pedido**
+
+Definir uma política de resiliência para o consumer e o painel, distinguindo indisponibilidade
+transitória de carga que nunca será processável.
+
+**O que a IA sugeriu**
+
+Usar quatro retries exponenciais de 1 s, 2 s, 4 s e 8 s para falhas transitórias e encaminhar
+desserialização/contrato inválido diretamente para uma DLT própria de cada consumidor.
+
+**O que foi aceito**
+
+Foi aceita a política, com `DefaultErrorHandler`, `ErrorHandlingDeserializer` e
+`DeadLetterPublishingRecoverer` nos dois consumidores.
+
+**O que foi recusado**
+
+Foi recusado retry infinito e também um tópico de descarte compartilhado.
+
+**Justificativa técnica da recusa**
+
+Retry infinito prende o offset e impede a partição de avançar; DLT compartilhada mistura falhas
+de aplicações que têm dependências e critérios diferentes. O limite, o motivo e o consumidor
+responsável ficam registrados no [ADR-006](adr/ADR-006-resiliencia.md).
+
+### Interação 2 — caminho de reprocessamento
+
+**O que foi pedido**
+
+Criar um caminho manual que reinjete uma mensagem da DLT sem perder o payload nem o `ce_id`.
+
+**O que a IA sugeriu**
+
+Adicionar um endpoint operacional que leia uma mensagem por tópico, partição e offset com
+desserializadores de bytes e a publique no tópico original copiando todos os headers.
+
+**O que foi aceito**
+
+Foi aceito `POST /operacoes/dlq/reprocessamentos` no consumer, sem reprocessamento automático.
+
+**O que foi recusado**
+
+Foi recusada a republicação em lote ou em laço.
+
+**Justificativa técnica da recusa**
+
+Reprocessamento exige que a causa esteja corrigida e que alguém escolha os eventos. Republicar
+automaticamente a mesma carga inválida apenas recriaria o erro e poderia gerar tempestade na DLT.
+O consumer continua idempotente por `eventoId`, portanto repetir uma escolha explícita não duplica
+o efeito.
+
+### Interação 3 — falha da compensação
+
+**O que foi pedido**
+
+Explicar o estado do ingresso quando `IngressoInvalidadoEvent` falha depois de a emissão já ter
+chegado ao consumer.
+
+**O que a IA sugeriu**
+
+Tratar a invalidação como qualquer outro evento: quatro retries, DLT própria, reprocessamento
+manual após correção e deduplicação por `eventoId`.
+
+**O que foi aceito**
+
+Foi aceito manter a projeção `EMITIDO` enquanto a compensação estiver pendente e tornar o estado
+indeterminado observável pela DLT.
+
+**O que foi recusado**
+
+Foi recusado apagar o ingresso, alterar a projeção manualmente sem fato e criar uma compensação
+recursiva da compensação.
+
+**Justificativa técnica da recusa**
+
+O log continua sendo a fonte da sequência dos fatos. Se a compensação falha, o evento precisa
+continuar disponível para retry/reprocessamento; um UPDATE manual resolveria a tela, mas destruiria
+a explicação de como o estado foi alcançado.
+
+### Interação 4 — escopo da apresentação e observabilidade
+
+**O que foi pedido**
+
+Completar o documento de arquitetura e os slides finais com escala e sinais operacionais úteis.
+
+**O que a IA sugeriu**
+
+Descrever escala pelo lag do grupo, limitada pelo número de partições, e observar lag por partição,
+idade do evento mais antigo, taxa de entrada na DLT e tempo entre `ocorridoEm` e o efeito.
+
+**O que foi aceito**
+
+Esses sinais foram incluídos em `docs/arquitetura.md` e na apresentação.
+
+**O que foi recusado**
+
+Foi recusada a inclusão de Kubernetes, KEDA, OpenTelemetry, Schema Registry e banco adicional
+apenas para ornamentar o projeto.
+
+**Justificativa técnica da recusa**
+
+O documento deve explicar o sistema existente. Essas tecnologias podem ser evoluções futuras,
+mas não são necessárias para provar o desenho atual e aumentariam o escopo sem requisito concreto.

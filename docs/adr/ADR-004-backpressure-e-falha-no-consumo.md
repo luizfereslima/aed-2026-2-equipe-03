@@ -80,9 +80,9 @@ está ocupado. É este o par de números que define a vazão máxima aceita.
 
 Dois caminhos, deliberadamente diferentes:
 
-- **Transitória** (banco, rede, broker): espera dobrando a partir de 1 s, desistindo aos
-  30 s. A espera é o que impede o retry de virar tempestade contra um recurso que já está
-  sofrendo.
+- **Transitória** (banco, rede, broker): quatro novas tentativas, com espera de 1 s, 2 s, 4 s
+  e 8 s. A espera é o que impede o retry de virar tempestade contra um recurso que já está
+  sofrendo; depois da quarta tentativa, a mensagem vai para a DLT.
 - **Não repetível** (falha de desserialização, já fatal por padrão, e
   `IllegalArgumentException` de contrato violado): vai direto ao tópico de descarte, sem
   queimar tentativa. Insistir dez vezes na mesma carga dá o mesmo resultado dez vezes.

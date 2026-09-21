@@ -24,7 +24,7 @@ public class IngressoService {
 
     @Transactional
     public void processar(IngressoEmitidoEvent evento) {
-        exigirEventoId(evento);
+        validarEventoEmitido(evento);
 
         if (eventoProcessadoRepository.existsById(evento.getEventoId())) {
             return;
@@ -45,7 +45,7 @@ public class IngressoService {
 
     @Transactional
     public void invalidar(IngressoInvalidadoEvent evento) {
-        exigirEventoId(evento.getEventoId());
+        validarEventoInvalidado(evento);
         if (eventoProcessadoRepository.existsById(evento.getEventoId())) {
             return;
         }
@@ -63,15 +63,36 @@ public class IngressoService {
      * — e insistir não conserta a carga. A exceção está classificada como não repetível no
      * {@code KafkaConfig}, e leva a mensagem direto ao tópico de descarte.
      */
-    private void exigirEventoId(IngressoEmitidoEvent evento) {
-        exigirEventoId(evento.getEventoId());
+    private void validarEventoEmitido(IngressoEmitidoEvent evento) {
+        if (evento == null) {
+            throw new IllegalArgumentException("evento de emissão não pode ser nulo");
+        }
+        exigirTexto(evento.getEventoId(), "eventoId");
+        exigirTexto(evento.getIngressoId(), "ingressoId");
+        exigirTexto(evento.getVendaId(), "vendaId");
+        exigirTexto(evento.getEventoComercialId(), "eventoComercialId");
+        if (evento.getOcorridoEm() == null) {
+            throw new IllegalArgumentException("ocorridoEm é obrigatório no contrato");
+        }
     }
 
-    private void exigirEventoId(String eventoId) {
-        if (!StringUtils.hasText(eventoId)) {
-            throw new IllegalArgumentException(
-                    "eventoId é obrigatório no contrato e é a chave de deduplicação; evento sem ele não é processável"
-            );
+    private void validarEventoInvalidado(IngressoInvalidadoEvent evento) {
+        if (evento == null) {
+            throw new IllegalArgumentException("evento de invalidação não pode ser nulo");
+        }
+        exigirTexto(evento.getEventoId(), "eventoId");
+        exigirTexto(evento.getIngressoId(), "ingressoId");
+        exigirTexto(evento.getVendaId(), "vendaId");
+        exigirTexto(evento.getEventoComercialId(), "eventoComercialId");
+        exigirTexto(evento.getMotivo(), "motivo");
+        if (evento.getOcorridoEm() == null) {
+            throw new IllegalArgumentException("ocorridoEm é obrigatório no contrato");
+        }
+    }
+
+    private void exigirTexto(String valor, String nomeCampo) {
+        if (!StringUtils.hasText(valor)) {
+            throw new IllegalArgumentException(nomeCampo + " é obrigatório no contrato");
         }
     }
 }

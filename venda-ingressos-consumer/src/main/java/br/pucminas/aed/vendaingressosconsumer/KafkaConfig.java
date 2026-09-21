@@ -3,27 +3,28 @@ package br.pucminas.aed.vendaingressosconsumer;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
-import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
-import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.ExponentialBackOff;
+import br.pucminas.aed.vendaingressosconsumer.domain.IngressoEmitidoEvent;
 import br.pucminas.aed.vendaingressosconsumer.domain.IngressoInvalidadoEvent;
 
 /**
@@ -85,11 +86,28 @@ public class KafkaConfig {
         );
 
         ExponentialBackOff espera = new ExponentialBackOff(1_000L, 2.0);
-        espera.setMaxElapsedTime(30_000L);
+        espera.setMaxInterval(8_000L);
+        espera.setMaxElapsedTime(15_000L);
 
         DefaultErrorHandler tratamentoDeFalha = new DefaultErrorHandler(encaminhamentoParaDescarte, espera);
         tratamentoDeFalha.addNotRetryableExceptions(IllegalArgumentException.class);
         return tratamentoDeFalha;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, IngressoEmitidoEvent>
+    kafkaListenerContainerFactory(
+            @Value("${spring.kafka.bootstrap-servers}") String bootstrapServers,
+            @Value("${spring.kafka.consumer.group-id}") String groupId,
+            DefaultErrorHandler errorHandler
+    ) {
+        return criarFactory(
+                IngressoEmitidoEvent.class,
+                bootstrapServers,
+                groupId,
+                errorHandler,
+                "br.pucminas.aed.vendaingressosconsumer.domain"
+        );
     }
 
     @Bean
@@ -99,6 +117,22 @@ public class KafkaConfig {
             @Value("${spring.kafka.consumer.group-id}") String groupId,
             DefaultErrorHandler errorHandler
     ) {
+        return criarFactory(
+                IngressoInvalidadoEvent.class,
+                bootstrapServers,
+                groupId,
+                errorHandler,
+                "br.pucminas.aed.vendaingressosconsumer.domain"
+        );
+    }
+
+    private <T> ConcurrentKafkaListenerContainerFactory<String, T> criarFactory(
+            Class<T> tipo,
+            String bootstrapServers,
+            String groupId,
+            DefaultErrorHandler errorHandler,
+            String pacoteConfiavel
+    ) {
         Map<String, Object> configuracao = new HashMap<>();
         configuracao.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configuracao.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
@@ -106,15 +140,14 @@ public class KafkaConfig {
         configuracao.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         configuracao.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 50);
 
-        JsonDeserializer<IngressoInvalidadoEvent> jsonDeserializer =
-                new JsonDeserializer<>(IngressoInvalidadoEvent.class, false);
-        jsonDeserializer.addTrustedPackages("br.pucminas.aed.vendaingressosconsumer.domain");
-        ConsumerFactory<String, IngressoInvalidadoEvent> consumerFactory = new DefaultKafkaConsumerFactory<>(
+        JsonDeserializer<T> jsonDeserializer = new JsonDeserializer<>(tipo, false);
+        jsonDeserializer.addTrustedPackages(pacoteConfiavel);
+        ConsumerFactory<String, T> consumerFactory = new DefaultKafkaConsumerFactory<>(
                 configuracao,
                 new StringDeserializer(),
                 new ErrorHandlingDeserializer<>(jsonDeserializer)
         );
-        ConcurrentKafkaListenerContainerFactory<String, IngressoInvalidadoEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, T> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler);

@@ -19,6 +19,27 @@ O fluxo de compensação usa `IngressoInvalidadoEvent` no tópico
 Seus campos são `eventoId`, `ocorridoEm`, `ingressoId`, `vendaId`, `eventoComercialId` e
 `motivo`. O `eventoId` identifica a invalidação, não a emissão original.
 
+## Contrato de compensação — `ingressos.ingresso.invalidado.v1`
+
+`IngressoInvalidadoEvent` é um fato novo: uma emissão que já existia foi invalidada. Ele não
+edita nem remove `IngressoEmitidoEvent`. O publisher publica o fato e o consumer altera a
+projeção para `INVALIDADO` depois de consumi-lo.
+
+| Campo | Tipo | Obrigatório | Significado |
+|---|---|---|---|
+| `eventoId` | string (UUID) | sim | Identidade deste fato de invalidação e chave de deduplicação. |
+| `ocorridoEm` | string ISO-8601 com offset | sim | Momento em que a invalidação foi registrada no publisher. |
+| `ingressoId` | string (UUID) | sim | Ingresso emitido que passa a ser observado como inválido. |
+| `vendaId` | string (UUID) | sim | Venda relacionada ao ingresso invalidado. |
+| `eventoComercialId` | string | sim | Evento comercial usado como chave de partição. |
+| `motivo` | string | sim | Motivo operacional da invalidação, sem dado pessoal. |
+
+Os headers CloudEvents são os mesmos do evento de emissão: `ce_specversion=1.0`, `ce_id` igual
+ao `eventoId` da invalidação, `ce_source=/venda-ingressos-publisher`, `ce_type` igual a
+`ingressos.ingresso.invalidado.v1` e `ce_time` igual a `ocorridoEm`. A chave Kafka é
+`eventoComercialId`. O grupo `venda-ingressos-consumer` consome o tópico; o painel não reage à
+invalidação nesta versão porque sua pergunta é a contagem histórica de emissões.
+
 ## Envelope — CloudEvents 1.0 binário
 
 Os metadados viajam em headers Kafka. A carga não os repete.
